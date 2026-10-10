@@ -55,6 +55,42 @@ Our platform implements a Parameterized Quantum Circuit (P=1 Layer) to solve the
 
 *(Refer to the UI implementation in the `QuantumLab.tsx` component for the interactive circuit visualization).*
 
+## ⚛️ QISKIT: Quantum Optimization Engine
+
+CryoSight leverages **Qiskit**, IBM's open-source quantum computing SDK, to solve the complex optimization problem of qubit selection and thermal management. Instead of relying solely on classical heuristics, we map our cryogenic thermal objectives into a quantum-ready format.
+
+### 1. QUBO Formulation (Quadratic Unconstrained Binary Optimization)
+The core problem is modeled as a QUBO, where the objective is to minimize the heat dissipation (`P_heat`) across the dilution stages while maximizing the thermal margin (`Margin`) and penalizing cross-talk (`J_ij`) between adjacent transmon qubits.
+
+### 2. QAOA (Quantum Approximate Optimization Algorithm)
+The QUBO problem is translated into an Ising Hamiltonian and solved using a parameterized quantum circuit (P=1 layer) simulated via **Qiskit Aer**.
+
+**Circuit Architecture & Implementation Details:**
+*   **Initialization:** Hadamard gates (`H`) applied to all target qubits to create an equal superposition state.
+*   **Cost Hamiltonian (Phase Separator):** `Rz(γ)` gates applied using the cost angle `γ = 1.25 rad` to encode the problem constraints.
+*   **Entanglement (Mixing):** CNOT gates establish inter-qubit coupling, followed by `Rx(β)` gates using the mixer angle `β = 0.85 rad`.
+*   **Measurement:** The quantum state is measured, yielding a probability distribution.
+*   **Optimal Result:** The simulation converges on the optimal bitstring `|0110>`, identifying the best-performing qubit subset (e.g., Q0, Q1, Q5, Q6) that satisfies both thermal and fidelity constraints.
+
+*(Refer to the interactive circuit visualization in the `QuantumLab.tsx` component).*
+
+## ❄️ DILUTION REFRIGERATORS: The Cryogenic Hardware Context
+
+To understand the quantum optimization, one must understand the hardware it serves. Superconducting qubits operate at near-absolute zero temperatures. CryoSight simulates a multi-stage **Dilution Refrigerator** (the "Cryostat"), which is the backbone of this environment.
+
+### The Thermal Gradient Stack (300 K to 10 mK)
+Our digital twin models the physical cooling stages, each with distinct thermal loads, attenuation configurations, and wiring:
+
+1.  **Room Temperature Flange (300 K):** The classical control electronics interface. No attenuation.
+2.  **50 K Radiation Shield:** Captures initial radiative heat.
+3.  **4 K Stage (HEMT Anchor):** Houses the High Electron Mobility Transistor (HEMT) amplifiers. Attenuation: -20 dB.
+4.  **700 mK Still Evaporator:** The first sub-kelvin stage using Helium-3/Helium-4 mixture. Attenuation: -10 dB.
+5.  **100 mK Cold Plate:** Intermediate heat exchanger. Attenuation: -20 dB.
+6.  **10 mK Mixing Chamber (MXC):** The coldest stage where the superconducting QPU (Transmon Lattice) resides. It operates at an equilibrium of **8.2 mK** with a nominal cooling power of 22 µW. Attenuation: -20 dB cold attenuator.
+
+### Why This Matters for Qiskit Optimization
+The physical routing of coaxial cables (NbTi superconducting lines) introduces thermal noise and signal attenuation. By modeling the entire dilution refrigerator in our digital twin, CryoSight ensures that the **QAOA qubit selection** considers not just qubit coherence (T1/T2), but also the **thermal footprint** and **cooling margin** required to execute the workload without degrading the system.
+
 ## 🛠️ Technical Stack
 
 *   **Frontend:** React 19, TypeScript, Vite, Three.js (3D Digital Twin), Recharts (Telemetry), Tailwind CSS v4, Framer Motion, Lucide React.
