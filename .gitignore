@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.venv/
+backend/.venv/
+backend/__pycache__/
+backend/uvicorn.stdout.log
+backend/uvicorn.stderr.log
+frontend/vite.stdout.log
+frontend/vite.stderr.log
+**/__pycache__/
+*.py[cod]
