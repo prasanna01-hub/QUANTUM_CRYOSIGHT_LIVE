@@ -74,6 +74,53 @@ The QUBO problem is translated into an Ising Hamiltonian and solved using a para
 
 *(Refer to the interactive circuit visualization in the `QuantumLab.tsx` component).*
 
+### Qiskit Implementation: QAOA Circuit & Simulation
+The following Python snippet (from `backend/qiskit_simulator.py`) illustrates how CryoSight translates the cryogenic thermal QUBO problem into a quantum circuit and executes it using Qiskit Aer:
+
+```python
+from qiskit import QuantumCircuit
+from qiskit_aer import AerSimulator
+from qiskit_optimization import QuadraticProgram
+
+# 1. Define the QUBO Problem (Cryogenic Heat vs. Margin)
+problem = QuadraticProgram("cryogenic_heat_vs_margin")
+for index in range(4):
+    problem.binary_var(name=f"x{index}")
+
+# Minimize heat and penalize cross-talk while maximizing readiness
+problem.minimize(
+    linear={0: 0.55, 1: -1.35, 2: -1.1, 3: 0.7},
+    quadratic={(0, 1): 0.42, (0, 2): 0.25, (1, 2): 0.12, (1, 3): 0.38, (2, 3): 0.31}
+)
+
+# 2. Map QUBO to Ising Hamiltonian (Cost Operator)
+cost_operator, offset = problem.to_ising()
+width = problem.get_num_vars()
+
+# 3. Build the Parameterized Quantum Circuit (P=1 Layer)
+circuit = QuantumCircuit(width, width)
+circuit.h(range(width)) # Hadamard initialization
+
+# Apply Rz(γ) for Cost Hamiltonian (γ = 1.25 rad)
+for pauli, coefficient in cost_operator.to_list():
+    z_qubits = [width - 1 - i for i, char in enumerate(pauli) if char == "Z"]
+    if len(z_qubits) == 1:
+        circuit.rz(2 * 1.25 * float(coefficient.real), z_qubits[0])
+    elif len(z_qubits) == 2:
+        circuit.rzz(2 * 1.25 * float(coefficient.real), z_qubits[0], z_qubits[1])
+
+# Apply Rx(β) for Mixer Hamiltonian (β = 0.85 rad)
+circuit.rx(2 * 0.85, range(width))
+circuit.measure(range(width), range(width))
+
+# 4. Simulate on Qiskit Aer (Statevector Method, 1024 Shots)
+simulator = AerSimulator(method="statevector", seed_simulator=42)
+counts = simulator.run(circuit, shots=1024).result().get_counts()
+
+# 5. Extract Probabilities and Optimal Bitstring (e.g., |0110>)
+# The simulation converges to the best qubit subset satisfying thermal constraints.
+```
+
 ## ❄️ DILUTION REFRIGERATORS: The Cryogenic Hardware Context
 
 To understand the quantum optimization, one must understand the hardware it serves. Superconducting qubits operate at near-absolute zero temperatures. CryoSight simulates a multi-stage **Dilution Refrigerator** (the "Cryostat"), which is the backbone of this environment.
