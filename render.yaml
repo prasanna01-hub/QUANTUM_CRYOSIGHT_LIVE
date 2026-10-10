@@ -1,0 +1,17 @@
+# Render Blueprint (must live in the repository root to be auto-detected).
+# It points Render at the backend/ folder and runs the FastAPI + Qiskit service.
+services:
+  - type: web
+    name: cryosight-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: PYTHONUNBUFFERED
+        value: "1"

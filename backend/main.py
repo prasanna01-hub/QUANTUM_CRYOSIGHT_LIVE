@@ -78,11 +78,11 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
-    allow_credentials=True,
+    # Hackathon-friendly: accept requests from any origin so the Vercel
+    # production URL, Vercel preview deployments, and local development all
+    # work without CORS errors. Tighten this list before any real deployment.
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -192,6 +192,16 @@ def _telemetry(qubits: int, cooling_cells: int) -> dict:
         ],
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"status": "ok", "service": "cryosight-api"}
+
+
+@app.get("/health")
+def health_check() -> dict[str, str]:
+    return {"status": "ok", "service": "cryosight-api"}
 
 
 @app.get("/api/health")
